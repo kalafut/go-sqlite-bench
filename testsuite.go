@@ -1,5 +1,7 @@
 package main
 
+// Note: conns is always set to at least one for the modernc driver.
+
 var tests = []testCfg{
 	{section: "Read only"},
 	{wal: true, readers: 1, sync: "NORMAL", conns: 1},

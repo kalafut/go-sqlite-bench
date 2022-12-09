@@ -13,6 +13,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func init() {
@@ -26,7 +27,10 @@ const (
 
 var dbWriteMutex sync.Mutex
 
-var runtime = flag.Int64("t", 1, "per test duration in seconds")
+var (
+	runtime = flag.Int64("t", 1, "per test duration in seconds")
+	driver  = flag.String("d", "mattn", "database driver to use (mattn, modernc)")
+)
 
 type testCfg struct {
 	// section title
@@ -55,6 +59,15 @@ func (cfg testCfg) String() string {
 		cfg.readers, cfg.writers, yn(cfg.wal), cfg.sync, cfg.conns, yn(cfg.mutex))
 }
 
+func MustExec(db *sql.DB, query string, args ...any) (sql.Result, error) {
+	result, err := db.Exec(query, args...)
+	if err != nil {
+		panic(err)
+	}
+
+	return result, err
+}
+
 func randString(n int) string {
 	b := make([]byte, n)
 	for i := range b {
@@ -70,21 +83,27 @@ func initDB(cfg testCfg) (*sql.DB, string, error) {
 	var db *sql.DB
 	var err error
 
-	// ref https://github.com/mattn/go-sqlite3#connection-string
-	dsn := dbFilename + "?_timeout=10000&"
-	dsn += "_sync=" + cfg.sync + "&"
-
-	if cfg.wal {
-		dsn += "_journal_mode=WAL&"
+	driverStr := "sqlite3"
+	if *driver == "modernc" {
+		driverStr = "sqlite"
 	}
-
-	db, err = sql.Open("sqlite3", dsn)
+	db, err = sql.Open(driverStr, dbFilename)
 	if err != nil {
 		panic(err)
 	}
 
+	// https://www.sqlite.org/pragma.html
+	MustExec(db, "PRAGMA busy_timeout=10000")
+	MustExec(db, "PRAGMA synchronous="+cfg.sync)
+	if cfg.wal {
+		MustExec(db, "PRAGMA journal_mode=WAL")
+	}
+
 	if cfg.conns > 0 {
 		db.SetMaxOpenConns(cfg.conns)
+	} else if *driver == "modernc" {
+		// not setting this at all causes the modernc version to immediately fail with "DB locked"
+		db.SetMaxOpenConns(1)
 	}
 
 	_, err = db.Exec("CREATE TABLE foo (id INTEGER NOT NULL PRIMARY KEY, name TEXT)")
