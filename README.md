@@ -27,11 +27,11 @@ The full results are below, but here are a few things that stand out:
 - Setting `_journal=WAL` and leaving `SYNC` at the default of `NORMAL` (not `FULL`) are standard practice and showed to be indeed essential. Not doing those things is so bad I didn't bother with too many test runs with these set badly.
 - Using `SetMaxOpenConns(1)` (as recommended in the [mattn/go-sqlite FAQ](https://github.com/mattn/go-sqlite3#faq)) seems to reduce performance in high concurrency write-only and read-only loads.
 - Using `SetMaxOpenConns(1)` significantly increases write performance in mixed read/write loads, at the expense of read performance. It seems to keep the read/write mix fairer (relative to the amount of read/write load).
-- Using `SetMaxOpenConns(>0)` seems to be required for the [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) version to handle concurrent writes.
+- Using `SetMaxOpenConns(>0)` seems to be required for the [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) version to handle concurrency.
 - Using an application level write mutex:
   - had mixed (but fairly small) effects on write-only loads
   - resulted in many more reads (at the expence of writes) in mixed loads
-- At a _very_ rough approximation, the pure Go modernc driver was about half as fast as mattn's CGO version.
+- At a _very_ rough approximation, the pure Go modernc driver was about 75% as fast as mattn's CGO version.
 
 Those are just some immediate takeways from a few tests. If you have suggestions for how to improve the benchmark, want to add some more settings or test combinations (see `testsuite.go`), please open a PR.
 
