@@ -26,7 +26,7 @@ The full results are below, but here are a few things that stand out:
 - Concurrency reduces overall throughput regardless of test
 - Setting `_journal=WAL` and leaving `SYNC` at the default of `NORMAL` (not `FULL`) are standard practice and showed to be indeed essential. Not doing those things is so bad I didn't bother with too many test runs with these set badly.
 - Using `SetMaxOpenConns(1)` (as recommended in the [mattn/go-sqlite FAQ](https://github.com/mattn/go-sqlite3#faq)) seems to reduce performance in high concurrency write-only and read-only loads.
-- Using `SetMaxOpenConns(1)` significantly increases write performance in mixed read/write loads, at the expense of read performance. It seems to keep the read/write mix fairer (relative to the amount of read/write load).
+- Using `SetMaxOpenConns(1)` can significantly increases the write performance in mixed read/write loads, at the expense of read performance. It seems to keep the read/write mix fairer (relative to the amount of read/write load). But overall throughput seems to drop, sometimes quite a bit (eg when running the benchmarks on a lower spec VM). Still unclear what the best handling for this setting is.
 - Using `SetMaxOpenConns(>0)` seems to be required for the [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) version to handle concurrency.
 - Using an application level write mutex:
   - had mixed (but fairly small) effects on write-only loads
